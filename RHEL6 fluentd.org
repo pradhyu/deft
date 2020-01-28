@@ -1,0 +1,113 @@
+* fluentd  in rhel6 
+
+
+* install the java
+  yum install java 
+
+
+* Note ssl issue for docker in mac add MTU ( https://github.com/moby/moby/issues/34981)
+  ➜  ~ git:(master) ✗ cat ~/.docker/config.json
+{
+	"auths": {
+		"https://index.docker.io/v1/": {}
+	},
+	"HttpHeaders": {
+		"User-Agent": "Docker-Client/19.03.2 (darwin)"
+	},
+	"credsStore": "desktop",
+	"experimental": "enabled",
+	"stackOrchestrator": "swarm"
+}%                                                                              ➜  ~ git:(master) ✗ vim ~/.docker/config.json
+➜  ~ git:(master) ✗
+
+* get around ssl issue use http and then view the script 
+  /docker:c6:/ #$  curl -L http://toolbelt.treasuredata.com/sh/install-redhat-td-agent3.sh 
+echo "=============================="
+echo " td-agent Installation Script "
+echo "=============================="
+echo "This script requires superuser access to install rpm packages."
+echo "You will be prompted for your password by sudo."
+
+# clear any previous sudo permission
+sudo -k
+
+# run inside sudo
+sudo sh <<SCRIPT
+
+  # add GPG key
+  rpm --import https://packages.treasuredata.com/GPG-KEY-td-agent
+
+  # add treasure data repository to yum
+  cat >/etc/yum.repos.d/td.repo <<'EOF';
+[treasuredata]
+name=TreasureData
+baseurl=http://packages.treasuredata.com/3/redhat/\$releasever/\$basearch
+gpgcheck=1
+gpgkey=https://packages.treasuredata.com/GPG-KEY-td-agent
+EOF
+
+  # update your sources
+  yum check-update
+
+  # install the toolbelt
+  yes | yum install -y td-agent
+
+SCRIPT
+
+# message
+echo ""
+echo "Installation completed. Happy Logging!"
+echo ""
+/docker:c6:/ #$ 
+
+* start the service 
+$ td-agent
+
+* config file
+** if installed using td-agent the config file is in following location
+  https://docs.fluentd.org/configuration/config-file
+   sudo vi /etc/td-agent/td-agent.conf
+
+   FLUENT_CONF environment variable
+You can change default configuration file location via FLUENT_CONF. For example, /etc/td-agent/td-agent.conf is specified via FLUENT_CONF inside td-agent scripts.
+-c option
+
+
+
+* try to run fat jar and get log in fluent d
+** copy fat jar from sample project to docker
+  ➜  libs git:(master) ✗ pwd
+/Users/pkshrestha/workspace/spring-practise-1/build/libs
+➜  libs git:(master) ✗ ls
+spring-practise-1-0.0.1-SNAPSHOT.jar
+➜  libs git:(master) ✗ docker cp spring*.jar c6:~/
+no such directory
+➜  libs git:(master) ✗ docker cp spring*.jar c6:/home
+➜  libs git:(master) ✗
+
+** run the jar 
+  cd /home 
+java -jar spring-practise-1-0.0.1-SNAPSHOT.jar > log.log
+
+now tail the log.log file in /home in fluentd
+
+
+** change /etc/td-agent/td-agent.conf file to
+
+# simple read log file
+# for parser details use https://docs.fluentd.org/parser
+<source>
+  @type tail
+  path /home/log.log
+  pos_file /var/log/audit.log.pos
+  tag debug.spring
+  <parse>
+   @type none
+  </parse>
+</source>
+
+## match tag=debug.** and dump to console
+<match debug.**>
+  @type stdout
+  @id output_stdout
+</match>
