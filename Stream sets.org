@@ -1,3 +1,8 @@
 * Stream sets as data collectors in docker 
 
+** url following
 https://streamsets.com/documentation/datacollector/latest/help/datacollector/UserGuide/Installation/Installing_the_DC-Docker.html
+
+
+** docker 
+   docker run -d -P --name streamsets-dc streamsets/datacollector

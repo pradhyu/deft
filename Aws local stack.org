@@ -1,0 +1,4 @@
+* Aws local stack
+
+* git hub project for aws local stack
+  https://github.com/localstack/localstack
